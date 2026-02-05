@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IIM Sirmaur Composite Score Calculator</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{
+  font-family: "Segoe UI", Arial;
+  background: linear-gradient(135deg,#e3f2fd,#f5f7fa);
+  padding:40px;
+  display:flex;
+  justify-content:center;
+}
+.card{
+  width:960px;
+  background:#fff;
+  padding:32px;
+  border-radius:14px;
+  box-shadow:
+    0 15px 35px rgba(0,0,0,.15),
+    inset 0 1px 0 rgba(255,255,255,.4);
+}
+h1{
+  text-align:center;
+  color:#0d47a1;
+  margin-bottom:6px;
+}
+.sub{
+  text-align:center;
+  font-size:13px;
+  color:#555;
+  margin-bottom:26px;
+}
+.section{margin-top:24px;}
+.title{
+  font-weight:600;
+  margin-bottom:10px;
+  color:#333;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+}
+input,select{
+  width:100%;
+  padding:9px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.1);
+}
+button{
+  width:100%;
+  padding:15px;
+  font-size:16px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+.calc{
+  background:linear-gradient(135deg,#1976d2,#0d47a1);
+  color:#fff;
+  margin-top:26px;
+}
+.pdf{
+  background:linear-gradient(135deg,#2e7d32,#1b5e20);
+  color:#fff;
+  margin-top:12px;
+}
+.result{
+  margin-top:20px;
+  padding:16px;
+  background:#e3f2fd;
+  border-radius:8px;
+  font-size:18px;
+  text-align:center;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,.12);
+}
+.verdict{
+  margin-top:14px;
+  padding:15px;
+  border-radius:8px;
+  font-weight:600;
+}
+.low{background:#fdecea;color:#c62828;}
+.strong{background:#fff8e1;color:#ef6c00;}
+.convert{background:#e8f5e9;color:#2e7d32;}
+</style>
+</head>
+
+<body>
+<div class="card">
+<h1>IIM Sirmaur Composite Score Calculator</h1>
+<div class="sub">For Final Selection · Developed by Ayush Pawar</div>
+
+<div class="section">
+<div class="title">Category</div>
+<div class="grid">
+<select id="category">
+<option value="general">General</option>
+<option value="ews">EWS</option>
+<option value="ncobc">NC-OBC</option>
+<option value="sc">SC</option>
+<option value="st">ST</option>
+</select>
+<select id="pwd">
+<option value="no">Non-PwD</option>
+<option value="yes">PwD</option>
+</select>
+</div>
+</div>
+
+<div class="section">
+<div class="title">CAT Scores</div>
+<div class="grid">
+<input id="varc" placeholder="VARC">
+<input id="dilr" placeholder="DILR">
+<input id="qa" placeholder="QA">
+<input id="h_varc" placeholder="Highest VARC">
+<input id="h_dilr" placeholder="Highest DILR">
+<input id="h_qa" placeholder="Highest QA">
+</div>
+</div>
+
+<div class="section">
+<div class="title">PI Score</div>
+<input id="pi" placeholder="Out of 20">
+</div>
+
+<div class="section">
+<div class="title">Academics</div>
+<div class="grid">
+<input id="tenth" placeholder="10th %">
+<input id="twelfth" placeholder="12th %">
+<input id="grad" placeholder="Graduation %">
+</div>
+</div>
+
+<div class="section">
+<div class="title">Other</div>
+<div class="grid">
+<input id="workex" placeholder="Work Experience (Months)">
+<select id="gender">
+<option value="male">Male</option>
+<option value="female">Female / Transgender</option>
+</select>
+<select id="trail">
+<option value="yes">Trailblazer</option>
+<option value="no">Not Trailblazer</option>
+</select>
+</div>
+</div>
+
+<button class="calc" onclick="calculate()">Calculate Composite Score</button>
+<button class="pdf" onclick="exportPDF()">Download PDF</button>
+
+<div id="output" class="result"></div>
+<div id="verdict"></div>
+</div>
+
+<script>
+const CUT_OFFS={
+nonpwd:{general:36.467,ews:37.29,ncobc:34.648,sc:28.14,st:8.659},
+pwd:{general:11.154,ews:24.054,ncobc:13.054,sc:11.386,st:13.242}
+};
+
+let lastResult=null;
+const v=id=>parseFloat(document.getElementById(id).value)||0;
+
+function calculate(){
+const scaledCAT=(
+(v("varc")/v("h_varc"))*35+
+(v("dilr")/v("h_dilr"))*30+
+(v("qa")/v("h_qa"))*35
+)/100*35;
+
+const acad=
+(v("tenth")<75?0:v("tenth")<=85?1:v("tenth")<=95?2:3)+
+(v("twelfth")<75?0:v("twelfth")<=85?1:v("twelfth")<=95?2:4)+
+(v("grad")<=70?2:v("grad")<=80?4:v("grad")<=90?6:8);
+
+const m=v("workex");
+const work=m<12?0:m<=17?10:m<=23?15:m<=35?20:m<=41?15:m<=53?10:5;
+
+const total=scaledCAT+v("pi")+acad+work+
+(gender.value==="female"?5:0)+
+(trail.value==="yes"?5:0);
+
+const pool=pwd.value==="yes"?CUT_OFFS.pwd:CUT_OFFS.nonpwd;
+const cutoff=pool[category.value];
+const diff=total-cutoff;
+
+let msg,cls;
+if(diff<0){msg="Low chance of conversion";cls="low";}
+else if(diff<=5){msg="Strong chance of convert";cls="strong";}
+else{msg="Converted / Very high probability";cls="convert";}
+
+output.innerHTML=`<b>Composite Score:</b> ${total.toFixed(2)} / 100`;
+verdict.innerHTML=`<div class="verdict ${cls}">${msg}</div>`;
+
+lastResult={total,cutoff,msg};
+}
+
+function exportPDF(){
+if(!lastResult)return alert("Please calculate first");
+
+const{jsPDF}=window.jspdf;
+const pdf=new jsPDF();
+
+pdf.setFontSize(16);
+pdf.text("IIM Sirmaur Composite Score Report",20,20);
+pdf.setFontSize(10);
+pdf.text("Developed by Ayush Pawar",20,28);
+
+pdf.setFontSize(12);
+pdf.text(`Composite Score: ${lastResult.total.toFixed(2)} / 100`,20,45);
+pdf.text(`Cut-off Score: ${lastResult.cutoff}`,20,55);
+pdf.text(`Assessment: ${lastResult.msg}`,20,65);
+
+pdf.setFontSize(10);
+pdf.text(`Generated on: ${new Date().toLocaleString()}`,20,85);
+
+pdf.save("IIM_Sirmaur_Composite_Score.pdf");
+}
+</script>
+</body>
+</html>
